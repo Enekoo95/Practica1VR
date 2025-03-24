@@ -12,7 +12,7 @@ public class CubeSpawner : MonoBehaviour
 
     void SpawnCube()
     {
-        Vector3 spawnPosition = new Vector3(Random.Range(-1.5f, 1.5f), 1f, 10f);
+        Vector3 spawnPosition = new Vector3(Random.Range(-1f, 1f), 1f, 10f);
         Instantiate(cubePrefab, spawnPosition, Quaternion.identity);
     }
 }
