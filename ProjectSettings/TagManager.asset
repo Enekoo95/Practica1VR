@@ -7,14 +7,15 @@ TagManager:
   - Projectile
   - Saber
   - Cube
+  - Stick
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Cube
   - Water
   - UI
-  - 
+  - Stick
   - 
   - 
   - 

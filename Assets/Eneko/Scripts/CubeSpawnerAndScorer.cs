@@ -1,6 +1,7 @@
-using UnityEngine;
+Ôªøusing UnityEngine;
 using System.Collections;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 public class CubeSpawnerAndScore : MonoBehaviour
 {
@@ -10,14 +11,18 @@ public class CubeSpawnerAndScore : MonoBehaviour
     public int score = 0;
     public TMP_Text scoreText;
     public float destinationOffsetRange = 1f;
+    public float bombProbability = 0.2f; // solo se usar√° en modo dif√≠cil
+    public int penaltyPoints = 5;
 
-
-    // Almacena la altura inicial de la cabeza (posiciÛn de la c·mara)
     private float fixedHeadHeight;
+    private bool modoDificil;
 
     void Start()
     {
-        // Al inicio se guarda la altura actual de la c·mara
+        // Detectar escena actual
+        string escenaActual = SceneManager.GetActiveScene().name;
+        modoDificil = escenaActual == "ComplicatedLevel";
+
         fixedHeadHeight = Camera.main.transform.position.y;
 
         int cubeLayer = LayerMask.NameToLayer("Cube");
@@ -25,11 +30,10 @@ public class CubeSpawnerAndScore : MonoBehaviour
 
         if (cubeLayer < 0 || stickLayer < 0)
         {
-            Debug.LogError("La capa 'Cube' o 'Stick' no est· definida. Aseg˙rate de crearlas en Project Settings > Tags and Layers.");
+            Debug.LogError("La capa 'Cube' o 'Stick' no est√° definida.");
             return;
         }
 
-        // Configura las colisiones: los cubos (capa "Cube") solo colisionan con objetos de la capa "Stick"
         for (int i = 0; i < 32; i++)
         {
             if (i != stickLayer)
@@ -52,56 +56,55 @@ public class CubeSpawnerAndScore : MonoBehaviour
 
     void SpawnCube()
     {
-        // Calcula la posiciÛn de spawn: partimos de la posiciÛn de la c·mara desplazada hacia adelante,
-        // pero establecemos la altura fija para que siempre sea la altura inicial de la cabeza.
         Vector3 spawnPos = Camera.main.transform.position + Camera.main.transform.forward * spawnDistance;
         spawnPos.y = fixedHeadHeight;
 
         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
         cube.transform.position = spawnPos;
-
-        // Reducir el tamaÒo del cubo al 25% del original (reducciÛn del 75%)
         cube.transform.localScale *= 0.1f;
+
+        bool isBomb = modoDificil && Random.value < bombProbability;
+
+        cube.GetComponent<Renderer>().material.color = isBomb ? Color.red : Color.blue;
+
+        if (isBomb)
+            Debug.Log("Cubo bomba generado");
+        else
+            Debug.Log("Cubo normal generado");
 
         cube.layer = LayerMask.NameToLayer("Cube");
 
         Rigidbody rb = cube.AddComponent<Rigidbody>();
         rb.useGravity = false;
+
         float offset = Random.Range(-destinationOffsetRange, destinationOffsetRange);
-        Debug.Log(new Vector3(Camera.main.transform.position.x + offset, Camera.main.transform.position.y, Camera.main.transform.position.z));
         Vector3 direction = (new Vector3(Camera.main.transform.position.x + offset, Camera.main.transform.position.y, Camera.main.transform.position.z) - spawnPos).normalized;
         rb.velocity = direction * cubeSpeed;
 
         CubeCollision collisionScript = cube.AddComponent<CubeCollision>();
         collisionScript.gameManager = this;
+        collisionScript.isBomb = isBomb;
     }
 
     public void AddScore(int amount)
     {
-        if (score > 20)
-        {
-            scoreText.text = "FIN";
-        }
-        else
-        {
-            score += amount;
-            Debug.Log("Score: " + score);
-            scoreText.text = score.ToString();
-        }
-
-
+        score += amount;
+        score = Mathf.Max(0, score);
+        scoreText.text = score >= 20 ? "FIN" : score.ToString();
     }
 }
 
 public class CubeCollision : MonoBehaviour
 {
     public CubeSpawnerAndScore gameManager;
+    public bool isBomb;
 
     void OnCollisionEnter(Collision collision)
     {
         if (collision.gameObject.CompareTag("Stick"))
         {
-            gameManager.AddScore(1);
+            int points = isBomb ? -gameManager.penaltyPoints : 1;
+            gameManager.AddScore(points);
             Destroy(gameObject);
         }
     }
